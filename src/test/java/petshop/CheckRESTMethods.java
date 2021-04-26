@@ -6,10 +6,12 @@ import models.pet.Category;
 import models.pet.Pet;
 import models.pet.ResponseError;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import retrofit2.Response;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -17,6 +19,15 @@ import java.util.stream.Stream;
 
 public class CheckRESTMethods {
     private PetStore petStore;
+    private static ResponseError responseError;
+
+    @BeforeAll
+    public static void beforeAll() {
+        responseError = new ResponseError();
+        responseError.setCode(1);
+        responseError.setType("error");
+        responseError.setMessage("Pet not found");
+    }
 
     @BeforeEach
     public final void beforeEach() {
@@ -46,29 +57,28 @@ public class CheckRESTMethods {
     @ParameterizedTest
     @MethodSource("param")
     public final void post200(final Pet myPet) throws IOException {
-        Pet createdPet = petStore.createPet(myPet).execute().body();
-        Assertions.assertEquals(myPet, createdPet);
+        Response<Pet> response = petStore.createPet(myPet).execute();
+        Assertions.assertEquals(200, response.code());
+        Assertions.assertEquals(myPet, response.body());
     }
 
     @ParameterizedTest
     @MethodSource("param")
     public final void get200(final Pet myPet) throws IOException {
         Pet createdPet = petStore.createPet(myPet).execute().body();
-        Pet resultPet = petStore.getPetById(createdPet.getId()).execute().body();
-        Assertions.assertEquals(myPet, resultPet);
+        Response<Pet> response = petStore.getPetById(createdPet.getId()).execute();
+        Assertions.assertEquals(200, response.code());
+        Assertions.assertEquals(myPet, response.body());
     }
 
     @ParameterizedTest
     @MethodSource("param")
     public final void get404(final Pet myPet) throws IOException {
-        ResponseError responseError = new ResponseError();
-        responseError.setCode(1);
-        responseError.setType("error");
-        responseError.setMessage("Pet not found");
         Pet createdPet = petStore.createPet(myPet).execute().body();
         petStore.deletePet(createdPet.getId()).execute();
-        ResponseError resultPet = petStore.getDeletedPetById(createdPet.getId()).execute().body();
-        Assertions.assertEquals(responseError, resultPet);
+        Response<ResponseError> response = petStore.getDeletedPetById(createdPet.getId()).execute();
+        Assertions.assertEquals(404, response.code());
+        Assertions.assertEquals(responseError, response.body());
     }
 
     @ParameterizedTest
@@ -76,8 +86,9 @@ public class CheckRESTMethods {
     public final void put200(final Pet myPet) throws IOException {
         Pet createdPet = petStore.createPet(myPet).execute().body();
         createdPet.setName("Pushistik");
-        Pet changedPet = petStore.changePet(createdPet).execute().body();
-        Assertions.assertEquals(createdPet, changedPet);
+        Response<Pet> response = petStore.changePet(createdPet).execute();
+        Assertions.assertEquals(200, response.code());
+        Assertions.assertEquals(createdPet, response.body());
     }
 
     @ParameterizedTest
@@ -86,8 +97,9 @@ public class CheckRESTMethods {
         Pet createdPet = petStore.createPet(myPet).execute().body();
         createdPet.setName("Pushistik");
         petStore.deletePet(createdPet.getId()).execute();
-        Pet resultPet = petStore.changePet(createdPet).execute().body();
-        Assertions.assertNull(resultPet);
+        Response<Pet> response = petStore.changePet(createdPet).execute();
+        Assertions.assertEquals(404, response.code());
+        Assertions.assertEquals(responseError, response.body());
     }
 
     @ParameterizedTest
@@ -98,8 +110,9 @@ public class CheckRESTMethods {
         responseDelete.setType("unknown");
         responseDelete.setMessage(String.valueOf(myPet.getId()));
         Pet createdPet = petStore.createPet(myPet).execute().body();
-        ResponseError answer = petStore.deletePet(createdPet.getId()).execute().body();
-        Assertions.assertEquals(responseDelete, answer);
+        Response<ResponseError> response = petStore.deletePet(createdPet.getId()).execute();
+        Assertions.assertEquals(200, response.code());
+        Assertions.assertEquals(responseDelete, response.body());
     }
 
     @ParameterizedTest
@@ -107,7 +120,8 @@ public class CheckRESTMethods {
     public final void delete404(final Pet myPet) throws IOException {
         Pet createdPet = petStore.createPet(myPet).execute().body();
         petStore.deletePet(createdPet.getId()).execute();
-        ResponseError answer = petStore.deletePet(createdPet.getId()).execute().body();
-        Assertions.assertNull(answer);
+        Response<ResponseError> response = petStore.deletePet(createdPet.getId()).execute();
+        Assertions.assertEquals(404, response.code());
+        Assertions.assertNull(response.body());
     }
 }
